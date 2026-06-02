@@ -18,8 +18,3 @@ export function PayRaldLogo({ className = "", size = "md" }: { className?: strin
   );
 }
 
-export function RaldMark({ className = "size-7" }: { className?: string }) {
-  return (
-    <img src="/__l5e/assets-v1/275bf5e4-ec20-4fa0-b874-d1b6070cb0fc/rald-logo.jpeg" alt="RALD" className={`${className} object-contain`} />
-  );
-}
