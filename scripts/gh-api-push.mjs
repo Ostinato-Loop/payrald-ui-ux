@@ -1,27 +1,31 @@
 #!/usr/bin/env node
 /**
- * Pushes the full workspace to GitHub using the Git Data API only.
- * No git CLI — pure HTTPS via fetch().
+ * Pushes the workspace to GitHub using the Git Data API only (no git CLI).
  *
- * Strategy:
- *   - Blocklist approach: include everything EXCEPT explicit non-source dirs/files.
- *   - Tree built WITHOUT base_tree → full mirror; anything not in this set is
- *     removed from the remote branch, making deletions explicit and safe.
- *   - HTTP 404 on branch lookup is handled separately from auth/server errors.
+ * Safety rules:
+ *   1. Secrets excluded  — real .env files are blocked; only .env.example
+ *      and .env.production (which contain no secrets by convention) are allowed.
+ *   2. Fail-fast         — any blob upload error aborts immediately; no silent
+ *      partial state is ever committed to the remote.
+ *   3. Full-mirror tree  — built without base_tree so the remote branch exactly
+ *      equals the collected file set; deletions are implicit and deterministic.
+ *   4. Dry-run summary   — prints files-to-push before touching the remote;
+ *      pass --dry-run to stop there.
  */
 import { readFileSync, readdirSync, statSync } from "fs";
-import { join, relative } from "path";
+import { join, relative, basename } from "path";
 
 const OWNER  = "Ostinato-Loop";
 const REPO   = "payrald-ui-ux";
 const BRANCH = "main";
 const ROOT   = "/home/runner/workspace";
 const TOKEN  = process.env.GITHUB_PAT;
+const DRY_RUN = process.argv.includes("--dry-run");
 
 if (!TOKEN) { console.error("GITHUB_PAT not set"); process.exit(1); }
 
 const API = "https://api.github.com";
-const headers = {
+const HDRS = {
   Authorization: `Bearer ${TOKEN}`,
   "Content-Type": "application/json",
   Accept: "application/vnd.github+json",
@@ -31,38 +35,44 @@ const headers = {
 
 async function api(method, path, body) {
   const res = await fetch(`${API}${path}`, {
-    method,
-    headers,
+    method, headers: HDRS,
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json();
-  if (!res.ok) {
-    throw new Error(`${method} ${path} → HTTP ${res.status}: ${JSON.stringify(data).slice(0, 300)}`);
-  }
+  if (!res.ok) throw new Error(`${method} ${path} → HTTP ${res.status}: ${JSON.stringify(data).slice(0,300)}`);
   return data;
 }
 
-// ── blocklist: directories that must never be pushed ──────────────────────
-// These are either build artefacts, runtime deps, or Replit-internal.
+// ── exclusion rules (blocklist) ────────────────────────────────────────────
+
+// Directories pruned at any depth
 const PRUNE_DIRS = new Set([
-  "node_modules",   // runtime deps — installed via pnpm on the target
-  ".git",           // git internals
-  "dist",           // build output — not source
-  ".cache",         // TypeScript / vite caches
-  ".local",         // Replit agent state, skills, task files — not source
+  "node_modules",  // runtime deps — installed by pnpm on the target
+  ".git",          // version-control internals
+  "dist",          // compiled output — not source
+  ".cache",        // TS / Vite caches
+  ".local",        // Replit agent state, skills, task files
 ]);
 
-// Directory names that should be skipped only at the repo root level
+// Additional directories pruned at the repo root only
 const PRUNE_ROOT_DIRS = new Set([
-  "mockup-sandbox", // Replit Canvas preview server — not part of product source
+  "mockup-sandbox", // Replit Canvas preview server — not product source
 ]);
 
-// Specific file names to exclude everywhere
-const PRUNE_FILES = new Set([
-  ".tsbuildinfo",   // incremental TS compiler cache
-  "artifact.toml",  // Replit artifact config — not product source
-  ".replit",        // Replit workspace config
+// File names pruned everywhere
+const PRUNE_FILENAMES = new Set([
+  ".tsbuildinfo",  // incremental TS compiler cache
+  "artifact.toml", // Replit artifact config
+  ".replit",       // Replit workspace config
 ]);
+
+// File patterns that may contain real secrets — excluded by name
+// Exception: .env.example and .env.production are safe (no real creds by convention)
+function isSecretFile(name) {
+  if (name === ".env.example" || name === ".env.production") return false;
+  // Block .env, .env.local, .env.development, .env.test, etc.
+  return name === ".env" || /^\.env\./.test(name);
+}
 
 // ── file collection ────────────────────────────────────────────────────────
 function collectFiles(dir, depth = 0, acc = []) {
@@ -78,7 +88,11 @@ function collectFiles(dir, depth = 0, acc = []) {
       if (depth === 0 && PRUNE_ROOT_DIRS.has(entry)) continue;
       collectFiles(full, depth + 1, acc);
     } else {
-      if (PRUNE_FILES.has(entry)) continue;
+      if (PRUNE_FILENAMES.has(entry)) continue;
+      if (isSecretFile(entry)) {
+        console.log(`   🔒 SECRET excluded: ${rel}`);
+        continue;
+      }
       acc.push({ full, rel });
     }
   }
@@ -87,80 +101,89 @@ function collectFiles(dir, depth = 0, acc = []) {
 
 // ── binary detection ───────────────────────────────────────────────────────
 const BINARY_EXT = new Set([
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico",
-  ".woff", ".woff2", ".ttf", ".eot", ".otf", ".pdf",
+  ".png",".jpg",".jpeg",".gif",".webp",".ico",
+  ".woff",".woff2",".ttf",".eot",".otf",".pdf",
 ]);
 
 // ── main ───────────────────────────────────────────────────────────────────
 (async () => {
   console.log("📦 Collecting files...");
   const files = collectFiles(ROOT);
-  console.log(`   Found ${files.length} files`);
+  console.log(`   ${files.length} files to push\n`);
 
-  // 1. Resolve HEAD SHA — distinguish 404 (branch missing) from real errors
-  console.log("\n🔍 Getting HEAD SHA...");
+  // Dry-run summary
+  const byDir = {};
+  for (const { rel } of files) {
+    const dir = rel.split("/").slice(0, 2).join("/");
+    byDir[dir] = (byDir[dir] ?? 0) + 1;
+  }
+  console.log("Summary by directory:");
+  for (const [dir, count] of Object.entries(byDir).sort()) {
+    console.log(`   ${String(count).padStart(4)}  ${dir}`);
+  }
+  console.log();
+
+  if (DRY_RUN) {
+    console.log("--dry-run: stopping before remote changes.");
+    process.exit(0);
+  }
+
+  if (files.length < 50) {
+    throw new Error(`Only ${files.length} files collected — aborting to prevent destructive push.`);
+  }
+
+  // 1. Resolve HEAD SHA — distinguish 404 from real errors
+  console.log("🔍 Getting HEAD SHA...");
   let parentSha = null;
   try {
     const ref = await api("GET", `/repos/${OWNER}/${REPO}/git/refs/heads/${BRANCH}`);
     parentSha = ref.object.sha;
-    console.log(`   HEAD: ${parentSha.slice(0, 8)}`);
+    console.log(`   HEAD: ${parentSha.slice(0,8)}`);
   } catch (err) {
     if (err.message.includes("HTTP 404")) {
-      console.log("   Branch not found — will create fresh");
+      console.log("   Branch not found — creating fresh branch");
     } else {
       throw err; // auth / permissions / server errors bubble up
     }
   }
 
-  // 2. Create blobs for every collected file
-  console.log("\n📤 Creating blobs...");
+  // 2. Create blobs — FAIL FAST on any error (no silent skips)
+  console.log(`\n📤 Uploading ${files.length} blobs...`);
   const treeEntries = [];
-  let done = 0;
-  let skipped = 0;
 
-  for (const { full, rel } of files) {
-    const extMatch = rel.match(/\.([^./]+)$/);
-    const ext      = extMatch ? `.${extMatch[1].toLowerCase()}` : "";
-    const isBinary = BINARY_EXT.has(ext);
+  for (let i = 0; i < files.length; i++) {
+    const { full, rel } = files[i];
+    const ext = (rel.match(/\.([^./]+)$/) ?? [])[1]?.toLowerCase();
+    const isBinary = BINARY_EXT.has(`.${ext}`);
+
     let content, encoding;
-
     try {
-      content  = isBinary
-        ? readFileSync(full).toString("base64")
-        : readFileSync(full, "utf8");
+      content  = isBinary ? readFileSync(full).toString("base64") : readFileSync(full, "utf8");
       encoding = isBinary ? "base64" : "utf-8";
-    } catch {
-      console.warn(`   SKIP (unreadable): ${rel}`);
-      skipped++;
-      continue;
-    }
-
-    try {
-      const blob = await api("POST", `/repos/${OWNER}/${REPO}/git/blobs`, { content, encoding });
-      treeEntries.push({ path: rel, mode: "100644", type: "blob", sha: blob.sha });
-      done++;
-      if (done % 25 === 0) process.stdout.write(`   ${done}/${files.length}...\n`);
     } catch (err) {
-      console.warn(`   SKIP (blob error): ${rel}: ${err.message.slice(0, 80)}`);
-      skipped++;
+      throw new Error(`Cannot read ${rel}: ${err.message}`);
     }
-  }
-  console.log(`   ✓ ${done} blobs uploaded  ✗ ${skipped} skipped`);
 
-  // Pre-push sanity check: make sure we have a reasonable file count
-  if (done < 50) {
-    throw new Error(`Suspiciously few files (${done}). Aborting to avoid destructive push.`);
-  }
+    let blob;
+    try {
+      blob = await api("POST", `/repos/${OWNER}/${REPO}/git/blobs`, { content, encoding });
+    } catch (err) {
+      throw new Error(`Blob upload failed for ${rel}: ${err.message}`);
+    }
 
-  // 3. Create tree from scratch — no base_tree means full mirror;
-  //    any file present on remote but absent here is implicitly deleted.
-  console.log("\n🌳 Creating full-mirror tree (no base_tree)...");
+    treeEntries.push({ path: rel, mode: "100644", type: "blob", sha: blob.sha });
+    if ((i + 1) % 30 === 0) process.stdout.write(`   ${i + 1}/${files.length}...\n`);
+  }
+  console.log(`   ✓ ${treeEntries.length} blobs uploaded`);
+
+  // 3. Full-mirror tree (no base_tree)
+  console.log("\n🌳 Creating full-mirror tree...");
   const tree = await api("POST", `/repos/${OWNER}/${REPO}/git/trees`, { tree: treeEntries });
-  console.log(`   tree SHA: ${tree.sha.slice(0, 8)}`);
+  console.log(`   tree: ${tree.sha.slice(0,8)}`);
 
-  // 4. Create commit
+  // 4. Commit
   console.log("\n💾 Creating commit...");
-  const commitBody = {
+  const commit = await api("POST", `/repos/${OWNER}/${REPO}/git/commits`, {
     message: `feat: PayRald Phase 1 — ALIA-powered consumer finance layer
 
 Part of the RALD ecosystem:
@@ -171,36 +194,29 @@ Phase 1 scope:
 - Send: peer-to-peer transfers via @username, email, or phone (ALIA resolves)
 - Pay: merchant payments via @merchant handle
 - Withdraw: GTBank / Wema / NIP bank withdrawals — no account numbers exposed
-- Auth: RALD ID + PIN login, token in localStorage as payrald_token
+- Auth: RALD ID + PIN, token stored as payrald_token in localStorage
 - API: Express + Drizzle ORM + PostgreSQL at api.pay.rald.cloud
 - Frontend: React + Vite, dark PayRald brand, mobile-first at pay.rald.cloud
-- CORS: locked to rald.cloud in production
+- CORS locked to rald.cloud in production
 - Zero Replit-specific code or dependencies`,
     tree: tree.sha,
-    author: {
-      name: "PayRald",
-      email: "payrald@rald.cloud",
-      date: new Date().toISOString(),
-    },
+    author: { name: "PayRald", email: "payrald@rald.cloud", date: new Date().toISOString() },
     parents: parentSha ? [parentSha] : [],
-  };
-  const commit = await api("POST", `/repos/${OWNER}/${REPO}/git/commits`, commitBody);
-  console.log(`   commit SHA: ${commit.sha.slice(0, 8)}`);
+  });
+  console.log(`   commit: ${commit.sha.slice(0,8)}`);
 
-  // 5. Update (or create) ref — force-push
+  // 5. Update ref (force)
   console.log("\n🚀 Updating ref...");
   if (parentSha) {
     await api("PATCH", `/repos/${OWNER}/${REPO}/git/refs/heads/${BRANCH}`, {
-      sha: commit.sha,
-      force: true,
+      sha: commit.sha, force: true,
     });
   } else {
     await api("POST", `/repos/${OWNER}/${REPO}/git/refs`, {
-      ref: `refs/heads/${BRANCH}`,
-      sha: commit.sha,
+      ref: `refs/heads/${BRANCH}`, sha: commit.sha,
     });
   }
 
-  console.log(`\n✅ Pushed ${done} files → https://github.com/${OWNER}/${REPO}/tree/${BRANCH}`);
+  console.log(`\n✅ Pushed ${treeEntries.length} files → https://github.com/${OWNER}/${REPO}/tree/${BRANCH}`);
   console.log(`   Commit: ${commit.sha}`);
-})();
+})().catch(err => { console.error("\n❌", err.message); process.exit(1); });
