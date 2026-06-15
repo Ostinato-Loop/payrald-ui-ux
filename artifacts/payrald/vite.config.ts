@@ -1,46 +1,27 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import path from "path";
-
-const port = Number(process.env.PORT || "5173");
 
 export default defineConfig({
-  base: "/",
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "src"),
-      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
-    },
-    dedupe: ["react", "react-dom"],
-  },
-  root: path.resolve(import.meta.dirname),
-  build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
-    emptyOutDir: true,
-  },
+  plugins: [react(), tailwindcss()],
   server: {
-    port,
-    strictPort: true,
+    port: parseInt(process.env.PORT ?? "5174"),
     host: "0.0.0.0",
-    allowedHosts: true,
-    fs: {
-      strict: true,
-    },
+    allowedHosts: "all",
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
-        changeOrigin: false,
+        target: `http://localhost:${process.env.API_PORT ?? "3000"}`,
+        changeOrigin: true,
       },
     },
   },
-  preview: {
-    port,
-    host: "0.0.0.0",
-    allowedHosts: true,
+  build: {
+    outDir: "dist/public",
+    emptyOutDir: true,
+  },
+  define: {
+    "import.meta.env.VITE_API_BASE": JSON.stringify(
+      process.env.VITE_API_BASE ?? ""
+    ),
   },
 });

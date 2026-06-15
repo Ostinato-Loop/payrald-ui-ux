@@ -1,235 +1,180 @@
-import { useLocation, Link } from "wouter";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useSignUp } from "@workspace/api-client-react";
-import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { motion } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
-import payraldLogo from "/payrald-icon-192.png";
-
-const formSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  raldId: z.string().min(3, "RALD ID is required"),
-  email: z.string().email("Invalid email"),
-  phone: z.string().min(10, "Phone number is required"),
-  pin: z.string().min(4, "PIN must be at least 4 digits").max(6, "PIN can be at most 6 digits"),
-  activatedTypes: z.array(z.string()).min(1, "Select at least one identity type"),
-});
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "../lib/auth";
+import { ApiError } from "../lib/api";
 
 export default function SignUp() {
-  const [, setLocation] = useLocation();
-  const { login } = useAuth();
-  const { toast } = useToast();
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      raldId: "",
-      email: "",
-      phone: "",
-      pin: "",
-      activatedTypes: ["Personal"],
-    },
-  });
+  const { signUp } = useAuth();
+  const [, navigate] = useLocation();
+  const [form, setForm] = useState({ raldId: "", name: "", email: "", phone: "", pin: "", confirmPin: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const signUpMutation = useSignUp();
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    signUpMutation.mutate(
-      { data: values as any },
-      {
-        onSuccess: (data) => {
-          login(data.token, data.user);
-        },
-        onError: () => {
-          toast({
-            variant: "destructive",
-            title: "Sign up failed",
-            description: "Please check your details and try again.",
-          });
-        },
-      }
-    );
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!form.raldId.trim()) return setError("Choose a RALD ID");
+    if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(form.raldId)) return setError("RALD ID: 3-32 chars, letters/numbers/._-");
+    if (!form.name.trim()) return setError("Enter your full name");
+    if (form.pin.length !== 6) return setError("PIN must be exactly 6 digits");
+    if (form.pin !== form.confirmPin) return setError("PINs don't match");
+    if (!form.email && !form.phone) return setError("Add at least an email or phone number");
 
-  const identityTypes = [
-    { id: "Personal", label: "Personal" },
-    { id: "Business", label: "Business" },
-    { id: "Network", label: "Network" },
-  ];
+    setLoading(true);
+    try {
+      await signUp({
+        raldId: form.raldId.trim().toLowerCase(),
+        name: form.name.trim(),
+        email: form.email.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        pin: form.pin,
+      });
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Sign up failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background p-4 py-12 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-120px] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute bottom-[-80px] right-[-80px] w-[300px] h-[300px] rounded-full bg-primary/5 blur-3xl" />
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: "easeOut" }}
-        className="w-full max-w-[390px] space-y-6 relative z-10"
-      >
-        <div className="space-y-2 text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
-            className="mx-auto w-16 h-16 mb-4 flex items-center justify-center"
-          >
-            <img
-              src={payraldLogo}
-              alt="PayRald"
-              className="w-16 h-16 object-contain rounded-2xl shadow-lg shadow-primary/20"
-            />
-          </motion.div>
-          <h1 className="text-3xl font-bold tracking-tight">Create your RALD ID</h1>
-          <p className="text-muted-foreground text-sm">Join the fastest payment network in Nigeria</p>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Emeka Okafor" {...field} className="h-12 bg-card/60 border-border/60" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="raldId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Choose a RALD ID</FormLabel>
-                  <FormControl>
-                    <Input placeholder="emeka" {...field} className="h-12 bg-card/60 border-border/60" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="emeka@example.com" {...field} className="h-12 bg-card/60 border-border/60" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone Number</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="+234..." {...field} className="h-12 bg-card/60 border-border/60" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="pin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Create PIN (4-6 digits)</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••" maxLength={6} {...field} className="h-12 bg-card/60 border-border/60 text-center tracking-widest text-xl" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="activatedTypes"
-              render={() => (
-                <FormItem>
-                  <div className="mb-3">
-                    <FormLabel className="text-base">Identity Types</FormLabel>
-                  </div>
-                  <div className="flex gap-2">
-                    {identityTypes.map((item) => (
-                      <FormField
-                        key={item.id}
-                        control={form.control}
-                        name="activatedTypes"
-                        render={({ field }) => {
-                          const isSelected = field.value?.includes(item.id);
-                          return (
-                            <FormItem
-                              key={item.id}
-                              className={`flex-1 flex flex-col items-center justify-center p-3 border rounded-xl cursor-pointer transition-all duration-200 ${isSelected ? 'bg-primary/20 border-primary shadow-sm shadow-primary/10' : 'bg-card/60 border-border/60 hover:border-border'}`}
-                              onClick={() => {
-                                const current = new Set(field.value || []);
-                                if (isSelected) {
-                                  current.delete(item.id);
-                                } else {
-                                  current.add(item.id);
-                                }
-                                field.onChange(Array.from(current));
-                              }}
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={isSelected}
-                                  className="hidden"
-                                />
-                              </FormControl>
-                              <FormLabel className="font-medium cursor-pointer text-sm">
-                                {item.label}
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button type="submit" className="w-full h-12 text-base font-semibold mt-4" disabled={signUpMutation.isPending}>
-              {signUpMutation.isPending ? "Creating account..." : "Continue"}
-            </Button>
-          </form>
-        </Form>
-        
-        <div className="text-center text-sm text-muted-foreground pb-2">
-          Already have an account?{" "}
-          <Link href="/signin" className="text-primary hover:underline font-medium">
-            Sign in
+    <div className="min-h-screen flex items-center justify-center px-4 py-8" style={{ background: "var(--bg)" }}>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <Link href="/">
+            <span className="inline-flex items-center gap-1 cursor-pointer">
+              <span className="font-black text-2xl text-white">Pay</span>
+              <span className="font-black text-2xl" style={{ color: "var(--blue)" }}>Rald</span>
+            </span>
           </Link>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>Create your account in seconds</p>
         </div>
 
-        <div className="flex items-center justify-center gap-2">
-          <img src="/alia-logo.jpg" alt="Powered by ALIA" className="w-5 h-5 rounded-sm object-cover" />
-          <span className="text-[11px] text-muted-foreground/60">Powered by ALIA Identity Network</span>
-        </div>
-      </motion.div>
+        <form
+          onSubmit={handleSubmit}
+          className="p-8 rounded-2xl border"
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">Your RALD ID</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>@</span>
+                <input
+                  type="text"
+                  value={form.raldId}
+                  onChange={set("raldId")}
+                  placeholder="yourname"
+                  className="w-full pl-7 pr-4 py-3 rounded-xl text-sm text-white outline-none border"
+                  style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                />
+              </div>
+              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Others will send you money as @{form.raldId || "yourname"}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">Full name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={set("name")}
+                placeholder="Amaka Johnson"
+                className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none border"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">Email address</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={set("email")}
+                placeholder="amaka@gmail.com"
+                className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none border"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">Phone number <span style={{ color: "var(--text-muted)" }}>(optional)</span></label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={set("phone")}
+                placeholder="+2348012345678"
+                className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none border"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">6-digit PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={form.pin}
+                onChange={(e) => setForm((f) => ({ ...f, pin: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                placeholder="••••••"
+                className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none border tracking-widest"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">Confirm PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={form.confirmPin}
+                onChange={(e) => setForm((f) => ({ ...f, confirmPin: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                placeholder="••••••"
+                className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none border tracking-widest"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
+
+            {error && (
+              <div className="text-sm px-3 py-2.5 rounded-lg" style={{ background: "var(--error-dim)", color: "var(--error)" }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl font-bold text-white text-sm"
+              style={{ background: "var(--blue)", opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? "Creating account…" : "Create account"}
+            </button>
+          </div>
+        </form>
+
+        <p className="text-center mt-6 text-sm" style={{ color: "var(--text-secondary)" }}>
+          Already have an account?{" "}
+          <Link href="/signin">
+            <span className="cursor-pointer font-medium" style={{ color: "var(--blue)" }}>Sign in</span>
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

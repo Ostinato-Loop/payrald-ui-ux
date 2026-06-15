@@ -4,16 +4,16 @@ import { transactionsTable } from "@workspace/db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-const ListTransactionsQueryParams = z.object({
-  limit: z.coerce.number().optional(),
-  type: z.string().optional(),
-});
-
 const router: IRouter = Router();
 
 function getUserId(req: any): string | null {
   return req.headers.authorization?.replace("Bearer ", "") ?? null;
 }
+
+const ListTransactionsQueryParams = z.object({
+  limit: z.coerce.number().optional(),
+  type: z.string().optional(),
+});
 
 router.get("/transactions", async (req, res) => {
   const userId = getUserId(req);

@@ -1,140 +1,124 @@
-import { useLocation, Link } from "wouter";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useSignIn } from "@workspace/api-client-react";
-import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { motion } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
-import payraldLogo from "/payrald-icon-192.png";
-
-const formSchema = z.object({
-  raldId: z.string().min(2, "RALD ID is required"),
-  pin: z.string().min(4, "PIN must be at least 4 digits").max(6, "PIN can be at most 6 digits"),
-});
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "../lib/auth";
+import { ApiError } from "../lib/api";
 
 export default function SignIn() {
-  const [, setLocation] = useLocation();
-  const { login } = useAuth();
-  const { toast } = useToast();
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      raldId: "",
-      pin: "",
-    },
-  });
+  const { signIn } = useAuth();
+  const [, navigate] = useLocation();
+  const [raldId, setRaldId] = useState("");
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const signInMutation = useSignIn();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!raldId.trim()) return setError("Enter your RALD ID");
+    if (pin.length !== 6) return setError("PIN must be exactly 6 digits");
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    signInMutation.mutate(
-      { data: values },
-      {
-        onSuccess: (data) => {
-          login(data.token, data.user);
-        },
-        onError: () => {
-          toast({
-            variant: "destructive",
-            title: "Sign in failed",
-            description: "Invalid RALD ID or PIN",
-          });
-        },
-      }
-    );
-  }
+    setLoading(true);
+    try {
+      await signIn(raldId.trim().toLowerCase(), pin);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Sign in failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center bg-background p-4 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-120px] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute bottom-[-80px] right-[-80px] w-[300px] h-[300px] rounded-full bg-primary/5 blur-3xl" />
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: "easeOut" }}
-        className="w-full max-w-[390px] space-y-8 relative z-10"
-      >
-        <div className="space-y-3 text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
-            className="mx-auto w-20 h-20 mb-6 flex items-center justify-center"
-          >
-            <img
-              src={payraldLogo}
-              alt="PayRald"
-              className="w-20 h-20 object-contain rounded-2xl shadow-lg shadow-primary/20"
-            />
-          </motion.div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-muted-foreground text-sm">Sign in to your PayRald account</p>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            <FormField
-              control={form.control}
-              name="raldId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>RALD ID</FormLabel>
-                  <FormControl>
-                    <Input placeholder="@adaeze" {...field} className="h-12 bg-card/60 border-border/60" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="pin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>PIN</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="••••"
-                      maxLength={6}
-                      {...field}
-                      className="h-12 bg-card/60 border-border/60 text-center text-2xl tracking-widest"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-semibold"
-              disabled={signInMutation.isPending}
-            >
-              {signInMutation.isPending ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-        </Form>
-
-        <div className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-primary hover:underline font-medium">
-            Sign up
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--bg)" }}>
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link href="/">
+            <span className="inline-flex items-center gap-1 cursor-pointer">
+              <span className="font-black text-2xl text-white">Pay</span>
+              <span className="font-black text-2xl" style={{ color: "var(--blue)" }}>Rald</span>
+            </span>
           </Link>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+            Welcome back
+          </p>
         </div>
 
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <img src="/alia-logo.jpg" alt="Powered by ALIA" className="w-5 h-5 rounded-sm object-cover" />
-          <span className="text-[11px] text-muted-foreground/60">Powered by ALIA Identity Network</span>
-        </div>
-      </motion.div>
+        <form
+          onSubmit={handleSubmit}
+          className="p-8 rounded-2xl border"
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">RALD ID</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--text-muted)" }}>@</span>
+                <input
+                  type="text"
+                  value={raldId}
+                  onChange={(e) => setRaldId(e.target.value.replace(/^@/, ""))}
+                  placeholder="yourname"
+                  autoComplete="username"
+                  className="w-full pl-7 pr-4 py-3 rounded-xl text-sm text-white outline-none border transition-colors"
+                  style={{
+                    background: "var(--surface-2)",
+                    borderColor: "var(--border)",
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">6-digit PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="••••••"
+                autoComplete="current-password"
+                className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none border transition-colors tracking-widest"
+                style={{
+                  background: "var(--surface-2)",
+                  borderColor: "var(--border)",
+                  letterSpacing: pin ? "0.5em" : undefined,
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--blue)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
+
+            {error && (
+              <div className="text-sm px-3 py-2.5 rounded-lg" style={{ background: "var(--error-dim)", color: "var(--error)" }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl font-bold text-white transition-opacity text-sm"
+              style={{ background: "var(--blue)", opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </div>
+        </form>
+
+        <p className="text-center mt-6 text-sm" style={{ color: "var(--text-secondary)" }}>
+          Don't have an account?{" "}
+          <Link href="/signup">
+            <span className="cursor-pointer font-medium" style={{ color: "var(--blue)" }}>
+              Create one
+            </span>
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

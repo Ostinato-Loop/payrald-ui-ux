@@ -1,117 +1,65 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
-@import "tw-animate-css";
-@plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
-
-@theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-card-border: hsl(var(--card-border));
-
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-popover-border: hsl(var(--popover-border));
-
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-primary-border: var(--primary-border);
-
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-secondary-border: var(--secondary-border);
-
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-muted-border: var(--muted-border);
-
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-accent-border: var(--accent-border);
-
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-destructive-border: var(--destructive-border);
-
-  --font-sans: var(--app-font-sans);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PayRald Brand Palette (light mode — matches the white-background logo)
-   Primary navy  : #1B2744  → hsl(222 53% 19%)
-   Red accent    : #CC2A2A  → hsl(0   66% 48%)
-   Gold accent   : #D4922A  → hsl(36  67% 50%)
-───────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* Surfaces */
-  --background: 220 30% 97%;        /* #F4F6FA — warm off-white page bg */
-  --foreground: 222 53% 19%;        /* #1B2744 — navy text */
-  --border: 220 22% 88%;            /* #D9DDE8 — soft border */
-  --input: 220 22% 88%;
-  --ring: 222 53% 19%;              /* navy focus ring */
-
-  /* Cards */
-  --card: 0 0% 100%;                /* pure white card surfaces */
-  --card-foreground: 222 53% 19%;
-  --card-border: 220 22% 90%;
-
-  /* Popovers */
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 53% 19%;
-  --popover-border: 220 22% 90%;
-
-  /* Primary — PayRald deep navy */
-  --primary: 222 53% 19%;           /* #1B2744 */
-  --primary-foreground: 0 0% 100%;  /* white text on navy */
-
-  /* Secondary — subtle light navy tint */
-  --secondary: 220 30% 93%;         /* #E4E9F4 */
-  --secondary-foreground: 222 53% 19%;
-
-  /* Muted */
-  --muted: 220 25% 93%;
-  --muted-foreground: 220 18% 52%;  /* #788099 — mid-tone gray-navy */
-
-  /* Accent — PayRald gold */
-  --accent: 36 67% 50%;             /* #D4922A */
-  --accent-foreground: 0 0% 100%;
-
-  /* Destructive — PayRald red */
-  --destructive: 0 66% 48%;         /* #CC2A2A */
-  --destructive-foreground: 0 0% 100%;
-
-  --app-font-sans: 'Plus Jakarta Sans', sans-serif;
-  --radius: 0.875rem;
+  --bg: #040C18;
+  --surface: #0D1B2E;
+  --surface-2: #132238;
+  --border: rgba(255, 255, 255, 0.08);
+  --blue: #0066FF;
+  --blue-hover: #0052CC;
+  --blue-dim: rgba(0, 102, 255, 0.12);
+  --text: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.35);
+  --success: #00C896;
+  --success-dim: rgba(0, 200, 150, 0.12);
+  --error: #FF4B4B;
+  --error-dim: rgba(255, 75, 75, 0.12);
+  --warning: #F5A623;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply font-sans antialiased bg-background text-foreground;
-  }
-  html {
-    color-scheme: light;
-  }
+* {
+  box-sizing: border-box;
 }
 
-/* Hide scrollbars while keeping scroll functionality */
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+html {
+  scroll-behavior: smooth;
 }
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--blue);
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px var(--surface) inset !important;
+  -webkit-text-fill-color: white !important;
+  caret-color: white;
 }

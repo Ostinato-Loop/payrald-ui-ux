@@ -1,10 +1,25 @@
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "./lib/auth";
 import App from "./App";
 import "./index.css";
-import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 
-const apiBase = import.meta.env.VITE_API_BASE_URL as string | undefined;
-if (apiBase) setBaseUrl(apiBase);
-setAuthTokenGetter(() => localStorage.getItem("payrald_token"));
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </QueryClientProvider>
+  </StrictMode>,
+);

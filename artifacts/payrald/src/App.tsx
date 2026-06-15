@@ -1,75 +1,80 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/lib/auth";
-import { MobileLayout } from "@/components/layout/MobileLayout";
-import NotFound from "@/pages/not-found";
+import { Switch, Route, Redirect } from "wouter";
+import { useAuth } from "./lib/auth";
+import Landing from "./pages/Landing";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import Dashboard from "./pages/Dashboard";
+import Send from "./pages/Send";
+import History from "./pages/History";
+import Withdraw from "./pages/Withdraw";
 
-import SignIn from "@/pages/SignIn";
-import SignUp from "@/pages/SignUp";
-import Home from "@/pages/Home";
-import Profile from "@/pages/Profile";
-import Send from "@/pages/Send";
-import Pay from "@/pages/Pay";
-import Withdraw from "@/pages/Withdraw";
-import Transactions from "@/pages/Transactions";
-import MyQrCode from "@/pages/MyQrCode";
-import TransactionDetail from "@/pages/TransactionDetail";
-
-const queryClient = new QueryClient();
-
-function ProtectedRoute({ component: Component }: { component: any }) {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <div className="min-h-[100dvh] flex items-center justify-center">Loading...</div>;
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
+        <div className="w-8 h-8 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
-
-  if (!user) {
-    return <SignIn />;
-  }
-
-  return (
-    <MobileLayout>
-      <Component />
-    </MobileLayout>
-  );
+  if (!user) return <Redirect to="/signin" />;
+  return <>{children}</>;
 }
 
-function Router() {
+function GuestRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
+        <div className="w-8 h-8 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (user) return <Redirect to="/dashboard" />;
+  return <>{children}</>;
+}
+
+export default function App() {
   return (
     <Switch>
-      <Route path="/signin" component={SignIn} />
-      <Route path="/signup" component={SignUp} />
-      
-      <Route path="/" component={() => <ProtectedRoute component={Home} />} />
-      <Route path="/send" component={() => <ProtectedRoute component={Send} />} />
-      <Route path="/pay" component={() => <ProtectedRoute component={Pay} />} />
-      <Route path="/withdraw" component={() => <ProtectedRoute component={Withdraw} />} />
-      <Route path="/transactions" component={() => <ProtectedRoute component={Transactions} />} />
-      <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
-      <Route path="/my-qr" component={() => <ProtectedRoute component={MyQrCode} />} />
-      <Route path="/transactions/:id" component={() => <ProtectedRoute component={TransactionDetail} />} />
-      
-      <Route component={NotFound} />
+      <Route path="/">
+        <GuestRoute>
+          <Landing />
+        </GuestRoute>
+      </Route>
+      <Route path="/signin">
+        <GuestRoute>
+          <SignIn />
+        </GuestRoute>
+      </Route>
+      <Route path="/signup">
+        <GuestRoute>
+          <SignUp />
+        </GuestRoute>
+      </Route>
+      <Route path="/dashboard">
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/send">
+        <ProtectedRoute>
+          <Send />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/history">
+        <ProtectedRoute>
+          <History />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/withdraw">
+        <ProtectedRoute>
+          <Withdraw />
+        </ProtectedRoute>
+      </Route>
+      <Route>
+        <Redirect to="/" />
+      </Route>
     </Switch>
   );
 }
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base="">
-          <AuthProvider>
-            <Router />
-          </AuthProvider>
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-}
-
-export default App;

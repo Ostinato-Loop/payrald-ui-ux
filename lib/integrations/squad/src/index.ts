@@ -1,11 +1,8 @@
-import crypto from "crypto";
-
 const BASE_URL = process.env.SQUAD_ENV === "production"
   ? "https://api.squadco.com"
   : "https://api-d.squadco.com";
 
 const SECRET_KEY = process.env.SQUADCO_SECRET_KEY ?? process.env.SQUADCO_SECRET_KEYS ?? "";
-const PUBLIC_KEY = process.env.SQUADCO_PUBLIC_KEY ?? "";
 
 async function squadRequest<T>(
   method: string,
@@ -88,54 +85,4 @@ export async function verifyAccountName(params: {
     bank_code: params.bankCode,
     account_number: params.accountNumber,
   });
-}
-
-export type VirtualAccountResult = {
-  virtual_account_number: string;
-  bank_code: string;
-  bank_name: string;
-  customer_identifier: string;
-  beneficiary_account: string;
-};
-
-export async function createVirtualAccount(params: {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  bvn?: string;
-  customerIdentifier: string;
-}): Promise<VirtualAccountResult> {
-  return squadRequest<VirtualAccountResult>("POST", "/virtual-account", {
-    first_name: params.firstName,
-    last_name: params.lastName,
-    mobile_num: params.phone.replace(/\D/g, ""),
-    email: params.email,
-    bvn: params.bvn ?? "",
-    beneficiary_account: PUBLIC_KEY,
-    customer_identifier: params.customerIdentifier,
-  });
-}
-
-export type TransactionVerifyResult = {
-  transaction_reference: string;
-  transaction_status: string;
-  amount: number;
-  currency: string;
-};
-
-export async function verifyTransaction(ref: string): Promise<TransactionVerifyResult> {
-  return squadRequest<TransactionVerifyResult>("GET", `/transaction/verify/${ref}`);
-}
-
-export function verifyWebhookSignature(rawBody: string, signature: string): boolean {
-  if (!SECRET_KEY) return false;
-  const computed = crypto
-    .createHmac("sha512", SECRET_KEY)
-    .update(rawBody)
-    .digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(computed, "hex"),
-    Buffer.from(signature, "hex"),
-  );
 }

@@ -25,11 +25,16 @@ app.use(
     },
   }),
 );
+
 const isProd = process.env.NODE_ENV === "production";
 app.use(
   cors({
     origin: isProd
-      ? ["https://pay.rald.cloud", "https://api.pay.rald.cloud"]
+      ? [
+          "https://pay.rald.cloud",
+          "https://payrald.rald.cloud",
+          "https://api.pay.rald.cloud",
+        ]
       : true,
     credentials: true,
   }),

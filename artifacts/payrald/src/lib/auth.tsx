@@ -1,62 +1,94 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { useLocation } from "wouter";
-import type { User } from "@workspace/api-client-react";
-import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { api } from "./api";
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  login: (token: string, user: User) => void;
-  logout: () => void;
-}
+export type AuthUser = {
+  id: string;
+  raldId: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  kycTier: number;
+  trustScore: number;
+  activatedTypes: string[];
+  createdAt: string;
+};
 
-const AuthContext = createContext<AuthContextType | null>(null);
+type AuthCtx = {
+  user: AuthUser | null;
+  token: string | null;
+  loading: boolean;
+  signIn: (raldId: string, pin: string) => Promise<void>;
+  signUp: (data: SignUpData) => Promise<void>;
+  signOut: () => void;
+};
+
+type SignUpData = {
+  raldId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  pin: string;
+};
+
+const AuthContext = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(localStorage.getItem("payrald_token"));
-  const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
-
-  const { data: user, isLoading, error } = useGetMe({
-    query: {
-      queryKey: getGetMeQueryKey(),
-      enabled: !!token,
-      retry: false,
-    }
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(() =>
+    localStorage.getItem("payrald_token"),
+  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (error) {
-      logout();
+    if (!token) {
+      setLoading(false);
+      return;
     }
-  }, [error]);
+    api
+      .get<AuthUser>("/auth/me")
+      .then((u) => setUser(u))
+      .catch(() => {
+        localStorage.removeItem("payrald_token");
+        setToken(null);
+      })
+      .finally(() => setLoading(false));
+  }, [token]);
 
-  const login = (newToken: string, user: User) => {
-    localStorage.setItem("payrald_token", newToken);
-    setToken(newToken);
-    queryClient.setQueryData(getGetMeQueryKey(), user);
-    setLocation("/");
+  const signIn = async (raldId: string, pin: string) => {
+    const res = await api.post<{ user: AuthUser; token: string }>(
+      "/auth/signin",
+      { raldId, pin },
+    );
+    localStorage.setItem("payrald_token", res.token);
+    setToken(res.token);
+    setUser(res.user);
   };
 
-  const logout = () => {
+  const signUp = async (data: SignUpData) => {
+    const res = await api.post<{ user: AuthUser; token: string }>(
+      "/auth/signup",
+      data,
+    );
+    localStorage.setItem("payrald_token", res.token);
+    setToken(res.token);
+    setUser(res.user);
+  };
+
+  const signOut = () => {
     localStorage.removeItem("payrald_token");
     setToken(null);
-    queryClient.setQueryData(getGetMeQueryKey(), null);
-    setLocation("/signin");
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user: user || null, isLoading: isLoading && !!token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+export function useAuth(): AuthCtx {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be inside AuthProvider");
+  return ctx;
 }
