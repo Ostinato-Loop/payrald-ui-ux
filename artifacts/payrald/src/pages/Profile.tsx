@@ -1,8 +1,9 @@
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { useSignOut } from "@workspace/api-client-react";
-import { LogOut, ShieldCheck, Star } from "lucide-react";
+import { LogOut, ShieldCheck, Star, QrCode, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Link } from "wouter";
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -60,6 +61,21 @@ export default function Profile() {
           ))}
         </div>
       </div>
+
+      {/* QR Code card */}
+      <Link href="/my-qr">
+        <div className="bg-primary rounded-2xl p-4 flex items-center gap-4 cursor-pointer active:opacity-80 transition-opacity"
+          style={{ background: "linear-gradient(135deg, #1B2744 0%, #243357 100%)" }}>
+          <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+            <QrCode size={24} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-white text-sm">My QR Code</p>
+            <p className="text-white/60 text-xs mt-0.5">Share to receive payments instantly</p>
+          </div>
+          <ChevronRight size={18} className="text-white/40" />
+        </div>
+      </Link>
 
       <div className="space-y-4">
         <p className="text-sm font-semibold">Account Settings</p>
