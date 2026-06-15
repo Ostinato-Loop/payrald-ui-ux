@@ -4,7 +4,7 @@ const BASE_URL = process.env.SQUAD_ENV === "production"
   ? "https://api.squadco.com"
   : "https://api-d.squadco.com";
 
-const SECRET_KEY = process.env.SQUADCO_SECRET_KEY ?? "";
+const SECRET_KEY = process.env.SQUADCO_SECRET_KEY ?? process.env.SQUADCO_SECRET_KEYS ?? "";
 const PUBLIC_KEY = process.env.SQUADCO_PUBLIC_KEY ?? "";
 
 async function squadRequest<T>(
