@@ -47,38 +47,52 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-:root, .dark {
-  --background: 215 64% 7%;
-  --foreground: 0 0% 100%;
-  --border: 214 36% 16%;
-  --input: 214 36% 16%;
-  --ring: 216 100% 50%;
-  
-  --card: 215 56% 10%;
-  --card-foreground: 0 0% 100%;
-  --card-border: 214 36% 16%;
-  
-  --popover: 215 56% 10%;
-  --popover-foreground: 0 0% 100%;
-  --popover-border: 214 36% 16%;
-  
-  --primary: 216 100% 50%;
-  --primary-foreground: 0 0% 100%;
-  
-  --secondary: 214 36% 16%;
-  --secondary-foreground: 0 0% 100%;
-  
-  --muted: 215 56% 10%;
-  --muted-foreground: 214 20% 65%;
-  
-  --accent: 214 36% 16%;
+/* ─────────────────────────────────────────────────────────────────────────────
+   PayRald Brand Palette (light mode — matches the white-background logo)
+   Primary navy  : #1B2744  → hsl(222 53% 19%)
+   Red accent    : #CC2A2A  → hsl(0   66% 48%)
+   Gold accent   : #D4922A  → hsl(36  67% 50%)
+───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --background: 220 30% 97%;        /* #F4F6FA — warm off-white page bg */
+  --foreground: 222 53% 19%;        /* #1B2744 — navy text */
+  --border: 220 22% 88%;            /* #D9DDE8 — soft border */
+  --input: 220 22% 88%;
+  --ring: 222 53% 19%;              /* navy focus ring */
+
+  /* Cards */
+  --card: 0 0% 100%;                /* pure white card surfaces */
+  --card-foreground: 222 53% 19%;
+  --card-border: 220 22% 90%;
+
+  /* Popovers */
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 53% 19%;
+  --popover-border: 220 22% 90%;
+
+  /* Primary — PayRald deep navy */
+  --primary: 222 53% 19%;           /* #1B2744 */
+  --primary-foreground: 0 0% 100%;  /* white text on navy */
+
+  /* Secondary — subtle light navy tint */
+  --secondary: 220 30% 93%;         /* #E4E9F4 */
+  --secondary-foreground: 222 53% 19%;
+
+  /* Muted */
+  --muted: 220 25% 93%;
+  --muted-foreground: 220 18% 52%;  /* #788099 — mid-tone gray-navy */
+
+  /* Accent — PayRald gold */
+  --accent: 36 67% 50%;             /* #D4922A */
   --accent-foreground: 0 0% 100%;
-  
-  --destructive: 0 84% 60%;
+
+  /* Destructive — PayRald red */
+  --destructive: 0 66% 48%;         /* #CC2A2A */
   --destructive-foreground: 0 0% 100%;
 
   --app-font-sans: 'Plus Jakarta Sans', sans-serif;
-  --radius: 1rem;
+  --radius: 0.875rem;
 }
 
 @layer base {
@@ -88,8 +102,16 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
-  /* Force dark mode */
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
+}
+
+/* Hide scrollbars while keeping scroll functionality */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
