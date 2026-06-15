@@ -1,0 +1,843 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: PayRald API — consumer financial layer of the RALD ecosystem
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication via ALIA identity
+  - name: wallet
+    description: Wallet & balance
+  - name: transfers
+    description: Identity-based transfers
+  - name: payments
+    description: Merchant payments
+  - name: withdrawals
+    description: Bank withdrawals
+  - name: transactions
+    description: Transaction history
+  - name: contacts
+    description: Recent contacts & address book
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /auth/signin:
+    post:
+      operationId: signIn
+      tags: [auth]
+      summary: Sign in with RALD ID + PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Invalid credentials
+
+  /auth/signup:
+    post:
+      operationId: signUp
+      tags: [auth]
+      summary: Register a new RALD account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpInput"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "409":
+          description: RALD ID already taken
+
+  /auth/signout:
+    post:
+      operationId: signOut
+      tags: [auth]
+      summary: Sign out
+      responses:
+        "204":
+          description: Signed out
+
+  # ── Wallet ────────────────────────────────────────────────────────────────
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get wallet balances for all identity types
+      responses:
+        "200":
+          description: Wallet balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/summary:
+    get:
+      operationId: getWalletSummary
+      tags: [wallet]
+      summary: Get wallet activity summary (sent/received totals, fee savings)
+      responses:
+        "200":
+          description: Wallet summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletSummary"
+
+  # ── ALIA Resolution ───────────────────────────────────────────────────────
+  /resolve:
+    post:
+      operationId: resolveIdentity
+      tags: [transfers]
+      summary: Resolve a RALD identity (@username, email, phone, merchant handle) via ALIA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveInput"
+      responses:
+        "200":
+          description: Resolved identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolvedIdentity"
+        "404":
+          description: Identity not found
+
+  # ── Transfers ─────────────────────────────────────────────────────────────
+  /transfers:
+    get:
+      operationId: listTransfers
+      tags: [transfers]
+      summary: List recent transfers
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: cursor
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Transfer list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransferPage"
+
+    post:
+      operationId: initiateTransfer
+      tags: [transfers]
+      summary: Send money to a @username, email, or phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferInput"
+      responses:
+        "201":
+          description: Transfer initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "400":
+          description: Validation error
+        "422":
+          description: Insufficient balance or identity not found
+
+  /transfers/{id}:
+    get:
+      operationId: getTransfer
+      tags: [transfers]
+      summary: Get a single transfer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transfer"
+        "404":
+          description: Not found
+
+  # ── Merchant Payments ─────────────────────────────────────────────────────
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: List recent merchant payments
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Payment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payment"
+
+    post:
+      operationId: initiatePayment
+      tags: [payments]
+      summary: Pay a merchant via @merchant or merchant@business
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Payment initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "422":
+          description: Merchant not found or insufficient balance
+
+  /payments/nearby:
+    get:
+      operationId: getNearbyMerchants
+      tags: [payments]
+      summary: Get nearby merchants (mocked — Phase 1)
+      responses:
+        "200":
+          description: Nearby merchants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Merchant"
+
+  # ── Withdrawals ───────────────────────────────────────────────────────────
+  /withdrawals:
+    get:
+      operationId: listWithdrawals
+      tags: [withdrawals]
+      summary: List past withdrawals
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Withdrawal list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Withdrawal"
+
+    post:
+      operationId: initiateWithdrawal
+      tags: [withdrawals]
+      summary: Withdraw to a bank account (GTBank, Wema, other NIP banks)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalInput"
+      responses:
+        "201":
+          description: Withdrawal initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Withdrawal"
+        "422":
+          description: Insufficient balance
+
+  /withdrawals/banks:
+    get:
+      operationId: listBanks
+      tags: [withdrawals]
+      summary: List supported NIP banks for withdrawal
+      responses:
+        "200":
+          description: Bank list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bank"
+
+  # ── Transactions ──────────────────────────────────────────────────────────
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: Full transaction ledger (transfers + payments + withdrawals)
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+        - name: type
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: [transfer, payment, withdrawal, null]
+        - name: cursor
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Transaction page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionPage"
+
+  /transactions/stats:
+    get:
+      operationId: getTransactionStats
+      tags: [transactions]
+      summary: Spending stats for dashboard (total sent, received, fees saved)
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionStats"
+
+  # ── Contacts ──────────────────────────────────────────────────────────────
+  /contacts:
+    get:
+      operationId: listContacts
+      tags: [contacts]
+      summary: Get recent contacts (people you've sent to or received from)
+      responses:
+        "200":
+          description: Contact list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Contact"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    # ── Auth ──────────────────────────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        raldId:
+          type: string
+          description: "@handle"
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        activatedTypes:
+          type: array
+          items:
+            type: string
+            enum: [Personal, Business, Network]
+        kycTier:
+          type: integer
+          minimum: 0
+          maximum: 3
+        trustScore:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, raldId, name, activatedTypes, kycTier, trustScore, createdAt]
+
+    SignInInput:
+      type: object
+      properties:
+        raldId:
+          type: string
+        pin:
+          type: string
+          minLength: 4
+          maxLength: 6
+      required: [raldId, pin]
+
+    SignUpInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+        raldId:
+          type: string
+          minLength: 3
+          pattern: "^[a-z0-9_.]+$"
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        pin:
+          type: string
+          minLength: 4
+          maxLength: 6
+        activatedTypes:
+          type: array
+          items:
+            type: string
+            enum: [Personal, Business, Network]
+      required: [name, raldId, email, phone, pin, activatedTypes]
+
+    AuthResult:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required: [user, token]
+
+    # ── Wallet ────────────────────────────────────────────────────────────
+    WalletBalance:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Personal, Business, Network]
+        total:
+          type: number
+        available:
+          type: number
+        pending:
+          type: number
+        currency:
+          type: string
+          default: NGN
+      required: [type, total, available, pending, currency]
+
+    Wallet:
+      type: object
+      properties:
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletBalance"
+        totalNgn:
+          type: number
+      required: [balances, totalNgn]
+
+    WalletSummary:
+      type: object
+      properties:
+        sentThisMonth:
+          type: number
+        receivedThisMonth:
+          type: number
+        feesSaved:
+          type: number
+        transactionCount:
+          type: integer
+        topRecipient:
+          type: ["string", "null"]
+      required: [sentThisMonth, receivedThisMonth, feesSaved, transactionCount]
+
+    # ── Resolution ────────────────────────────────────────────────────────
+    ResolveInput:
+      type: object
+      properties:
+        alias:
+          type: string
+          description: "@username, user@email.com, +234xxxxxxxxxx, or merchant@business"
+      required: [alias]
+
+    ResolvedIdentity:
+      type: object
+      properties:
+        alias:
+          type: string
+        aliasType:
+          type: string
+          enum: [username, email, phone, merchant]
+        displayName:
+          type: string
+        avatarInitials:
+          type: string
+        verified:
+          type: boolean
+        merchantHandle:
+          type: ["string", "null"]
+      required: [alias, aliasType, displayName, avatarInitials, verified]
+
+    # ── Transfers ─────────────────────────────────────────────────────────
+    TransferInput:
+      type: object
+      properties:
+        recipient:
+          type: string
+          description: "@username, email, or phone"
+        amount:
+          type: number
+          minimum: 10
+        currency:
+          type: string
+          default: NGN
+        note:
+          type: ["string", "null"]
+        identityType:
+          type: string
+          enum: [Personal, Business, Network]
+          default: Personal
+      required: [recipient, amount]
+
+    Transfer:
+      type: object
+      properties:
+        id:
+          type: string
+        senderId:
+          type: string
+        recipientAlias:
+          type: string
+        recipientDisplay:
+          type: string
+        amount:
+          type: number
+        fee:
+          type: number
+        currency:
+          type: string
+        note:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        aliasType:
+          type: string
+          enum: [username, email, phone]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, senderId, recipientAlias, recipientDisplay, amount, fee, currency, status, aliasType, createdAt]
+
+    TransferPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transfer"
+        nextCursor:
+          type: ["string", "null"]
+        total:
+          type: integer
+      required: [data, total]
+
+    # ── Payments ──────────────────────────────────────────────────────────
+    PaymentInput:
+      type: object
+      properties:
+        merchantAlias:
+          type: string
+          description: "@merchant or merchant@business"
+        amount:
+          type: number
+          minimum: 10
+        currency:
+          type: string
+          default: NGN
+        note:
+          type: ["string", "null"]
+      required: [merchantAlias, amount]
+
+    Merchant:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        handle:
+          type: string
+        category:
+          type: string
+        distanceMeters:
+          type: ["number", "null"]
+        rating:
+          type: ["number", "null"]
+        isOpen:
+          type: boolean
+        verified:
+          type: boolean
+      required: [id, name, handle, category, isOpen, verified]
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+        payerId:
+          type: string
+        merchantAlias:
+          type: string
+        merchantName:
+          type: string
+        amount:
+          type: number
+        fee:
+          type: number
+        currency:
+          type: string
+        note:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, payerId, merchantAlias, merchantName, amount, fee, currency, status, createdAt]
+
+    # ── Withdrawals ───────────────────────────────────────────────────────
+    Bank:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        shortName:
+          type: string
+        logo:
+          type: ["string", "null"]
+        supported:
+          type: boolean
+      required: [code, name, shortName, supported]
+
+    WithdrawalInput:
+      type: object
+      properties:
+        bankCode:
+          type: string
+        accountName:
+          type: string
+        amount:
+          type: number
+          minimum: 100
+        currency:
+          type: string
+          default: NGN
+        narration:
+          type: ["string", "null"]
+        identityType:
+          type: string
+          enum: [Personal, Business, Network]
+          default: Personal
+      required: [bankCode, accountName, amount]
+
+    Withdrawal:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        bankCode:
+          type: string
+        bankName:
+          type: string
+        accountName:
+          type: string
+        amount:
+          type: number
+        fee:
+          type: number
+        currency:
+          type: string
+        narration:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, bankCode, bankName, accountName, amount, fee, currency, status, createdAt]
+
+    # ── Transactions ──────────────────────────────────────────────────────
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [transfer_sent, transfer_received, payment, withdrawal]
+        description:
+          type: string
+        counterpartyName:
+          type: string
+        counterpartyAlias:
+          type: string
+        amount:
+          type: number
+        fee:
+          type: number
+        currency:
+          type: string
+        direction:
+          type: string
+          enum: [debit, credit]
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        reference:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, type, description, counterpartyName, counterpartyAlias, amount, fee, currency, direction, status, reference, createdAt]
+
+    TransactionPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        nextCursor:
+          type: ["string", "null"]
+        total:
+          type: integer
+      required: [data, total]
+
+    TransactionStats:
+      type: object
+      properties:
+        totalSent:
+          type: number
+        totalReceived:
+          type: number
+        totalFees:
+          type: number
+        feesSaved:
+          type: number
+        transferCount:
+          type: integer
+        paymentCount:
+          type: integer
+        withdrawalCount:
+          type: integer
+        monthlyVolume:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+              sent:
+                type: number
+              received:
+                type: number
+            required: [month, sent, received]
+      required: [totalSent, totalReceived, totalFees, feesSaved, transferCount, paymentCount, withdrawalCount, monthlyVolume]
+
+    # ── Contacts ──────────────────────────────────────────────────────────
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+        raldId:
+          type: string
+        displayName:
+          type: string
+        lastTransactionAt:
+          type: string
+          format: date-time
+        totalSent:
+          type: number
+        initials:
+          type: string
+      required: [id, raldId, displayName, lastTransactionAt, totalSent, initials]
