@@ -14,6 +14,7 @@ import Send from "@/pages/Send";
 import Pay from "@/pages/Pay";
 import Withdraw from "@/pages/Withdraw";
 import Transactions from "@/pages/Transactions";
+import MyQrCode from "@/pages/MyQrCode";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/withdraw" component={() => <ProtectedRoute component={Withdraw} />} />
       <Route path="/transactions" component={() => <ProtectedRoute component={Transactions} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+      <Route path="/my-qr" component={() => <ProtectedRoute component={MyQrCode} />} />
       
       <Route component={NotFound} />
     </Switch>
