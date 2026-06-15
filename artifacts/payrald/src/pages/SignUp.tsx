@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import payraldLogo from "/payrald-icon-192.png";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -41,7 +41,6 @@ export default function SignUp() {
   const signUpMutation = useSignUp();
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // @ts-ignore - mismatch in enum vs string, but it's safe to cast for API
     signUpMutation.mutate(
       { data: values as any },
       {
@@ -66,15 +65,33 @@ export default function SignUp() {
   ];
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background p-4 py-12">
+    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background p-4 py-12 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-120px] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute bottom-[-80px] right-[-80px] w-[300px] h-[300px] rounded-full bg-primary/5 blur-3xl" />
+      </div>
+
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[390px] space-y-8"
+        transition={{ duration: 0.45, ease: "easeOut" }}
+        className="w-full max-w-[390px] space-y-6 relative z-10"
       >
         <div className="space-y-2 text-center">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
+            className="mx-auto w-16 h-16 mb-4 flex items-center justify-center"
+          >
+            <img
+              src={payraldLogo}
+              alt="PayRald"
+              className="w-16 h-16 object-contain rounded-2xl shadow-lg shadow-primary/20"
+            />
+          </motion.div>
           <h1 className="text-3xl font-bold tracking-tight">Create your RALD ID</h1>
-          <p className="text-muted-foreground">Join the fastest network in Nigeria</p>
+          <p className="text-muted-foreground text-sm">Join the fastest payment network in Nigeria</p>
         </div>
 
         <Form {...form}>
@@ -86,7 +103,7 @@ export default function SignUp() {
                 <FormItem>
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Emeka Okafor" {...field} className="h-12 bg-card/50" />
+                    <Input placeholder="Emeka Okafor" {...field} className="h-12 bg-card/60 border-border/60" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -99,7 +116,7 @@ export default function SignUp() {
                 <FormItem>
                   <FormLabel>Choose a RALD ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="emeka" {...field} className="h-12 bg-card/50" />
+                    <Input placeholder="emeka" {...field} className="h-12 bg-card/60 border-border/60" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -112,7 +129,7 @@ export default function SignUp() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="emeka@example.com" {...field} className="h-12 bg-card/50" />
+                    <Input type="email" placeholder="emeka@example.com" {...field} className="h-12 bg-card/60 border-border/60" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,7 +142,7 @@ export default function SignUp() {
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="+234..." {...field} className="h-12 bg-card/50" />
+                    <Input type="tel" placeholder="+234..." {...field} className="h-12 bg-card/60 border-border/60" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -138,7 +155,7 @@ export default function SignUp() {
                 <FormItem>
                   <FormLabel>Create PIN (4-6 digits)</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••" maxLength={6} {...field} className="h-12 bg-card/50 text-center tracking-widest text-xl" />
+                    <Input type="password" placeholder="••••" maxLength={6} {...field} className="h-12 bg-card/60 border-border/60 text-center tracking-widest text-xl" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -150,7 +167,7 @@ export default function SignUp() {
               name="activatedTypes"
               render={() => (
                 <FormItem>
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <FormLabel className="text-base">Identity Types</FormLabel>
                   </div>
                   <div className="flex gap-2">
@@ -164,7 +181,7 @@ export default function SignUp() {
                           return (
                             <FormItem
                               key={item.id}
-                              className={`flex-1 flex flex-col items-center justify-center p-3 border rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-primary/20 border-primary' : 'bg-card/50 border-border'}`}
+                              className={`flex-1 flex flex-col items-center justify-center p-3 border rounded-xl cursor-pointer transition-all duration-200 ${isSelected ? 'bg-primary/20 border-primary shadow-sm shadow-primary/10' : 'bg-card/60 border-border/60 hover:border-border'}`}
                               onClick={() => {
                                 const current = new Set(field.value || []);
                                 if (isSelected) {
@@ -181,11 +198,11 @@ export default function SignUp() {
                                   className="hidden"
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal cursor-pointer text-sm">
+                              <FormLabel className="font-medium cursor-pointer text-sm">
                                 {item.label}
                               </FormLabel>
                             </FormItem>
-                          )
+                          );
                         }}
                       />
                     ))}
@@ -195,14 +212,22 @@ export default function SignUp() {
               )}
             />
 
-            <Button type="submit" className="w-full h-12 text-lg mt-6" disabled={signUpMutation.isPending}>
+            <Button type="submit" className="w-full h-12 text-base font-semibold mt-4" disabled={signUpMutation.isPending}>
               {signUpMutation.isPending ? "Creating account..." : "Continue"}
             </Button>
           </form>
         </Form>
         
-        <div className="text-center text-sm text-muted-foreground pb-8">
-          Already have an account? <Link href="/signin" className="text-primary hover:underline">Sign in</Link>
+        <div className="text-center text-sm text-muted-foreground pb-2">
+          Already have an account?{" "}
+          <Link href="/signin" className="text-primary hover:underline font-medium">
+            Sign in
+          </Link>
+        </div>
+
+        <div className="flex items-center justify-center gap-2">
+          <img src="/alia-logo.jpg" alt="Powered by ALIA" className="w-5 h-5 rounded-sm object-cover" />
+          <span className="text-[11px] text-muted-foreground/60">Powered by ALIA Identity Network</span>
         </div>
       </motion.div>
     </div>
