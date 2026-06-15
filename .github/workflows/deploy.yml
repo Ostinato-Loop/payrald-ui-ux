@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     name: Build & deploy to payrald.rald.cloud
@@ -13,9 +16,6 @@ jobs:
     permissions:
       contents: read
       deployments: write
-
-    env:
-      VITE_API_BASE: https://pay.rald.cloud
 
     steps:
       - uses: actions/checkout@v4
@@ -37,9 +37,11 @@ jobs:
         env:
           VITE_API_BASE: https://pay.rald.cloud
 
+      - name: Install Wrangler globally
+        run: npm install -g wrangler@latest
+
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy artifacts/payrald/dist/public --project-name=payrald-ui --branch=main
+        run: wrangler pages deploy artifacts/payrald/dist/public --project-name=payrald-ui --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
