@@ -1,0 +1,2 @@
+- [API auth wiring](api-auth-wiring.md) — setAuthTokenGetter must be called in main.tsx before render; deep subpath imports from generated files break at build time.
+- [Transaction type filter](transaction-type-filter.md) — DB stores transfer_sent/transfer_received; API type=transfer must use OR in query.
