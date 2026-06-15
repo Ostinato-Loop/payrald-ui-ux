@@ -1,8 +1,6 @@
-import { pgTable, text, integer, real, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-
-export const identityTypeEnum = pgEnum("identity_type", ["Personal", "Business", "Network"]);
 
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey(),

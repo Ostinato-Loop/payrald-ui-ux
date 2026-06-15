@@ -11,9 +11,12 @@ export const transfersTable = pgTable("transfers", {
   fee: real("fee").notNull().default(0),
   currency: text("currency").notNull().default("NGN"),
   note: text("note"),
-  status: text("status").notNull().default("completed"),
+  status: text("status").notNull().default("pending"),
   aliasType: text("alias_type").notNull(),
   identityType: text("identity_type").notNull().default("Personal"),
+  providerRef: text("provider_ref"),
+  aliaResolutionToken: text("alia_resolution_token"),
+  destinationBankCode: text("destination_bank_code"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

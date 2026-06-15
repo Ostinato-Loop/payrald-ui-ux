@@ -15,12 +15,14 @@ export const withdrawalsTable = pgTable("withdrawals", {
   userId: text("user_id").notNull(),
   bankCode: text("bank_code").notNull(),
   bankName: text("bank_name").notNull(),
+  accountNumber: text("account_number"),
   accountName: text("account_name").notNull(),
   amount: real("amount").notNull(),
   fee: real("fee").notNull().default(50),
   currency: text("currency").notNull().default("NGN"),
   narration: text("narration"),
-  status: text("status").notNull().default("completed"),
+  status: text("status").notNull().default("pending"),
+  providerRef: text("provider_ref"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

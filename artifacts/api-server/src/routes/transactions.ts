@@ -1,10 +1,16 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { transactionsTable } from "@workspace/db";
-import { eq, desc, and, or, like, sql } from "drizzle-orm";
-import { ListTransactionsQueryParams } from "@workspace/api-zod";
+import { eq, desc, and, or, sql } from "drizzle-orm";
+import { z } from "zod";
+
+const ListTransactionsQueryParams = z.object({
+  limit: z.coerce.number().optional(),
+  type: z.string().optional(),
+});
 
 const router: IRouter = Router();
+
 function getUserId(req: any): string | null {
   return req.headers.authorization?.replace("Bearer ", "") ?? null;
 }
@@ -17,45 +23,28 @@ router.get("/transactions", async (req, res) => {
   const type = params.success ? params.data.type : undefined;
 
   const userCondition = eq(transactionsTable.userId, userId);
-
   let typeCondition;
   if (type === "transfer") {
-    typeCondition = or(
-      eq(transactionsTable.type, "transfer_sent"),
-      eq(transactionsTable.type, "transfer_received"),
-    );
+    typeCondition = or(eq(transactionsTable.type, "transfer_sent"), eq(transactionsTable.type, "transfer_received"));
   } else if (type) {
     typeCondition = eq(transactionsTable.type, type);
   }
 
-  const whereClause = typeCondition
-    ? and(userCondition, typeCondition)
-    : userCondition;
-
-  const rows = await db
-    .select()
-    .from(transactionsTable)
-    .where(whereClause)
+  const rows = await db.select().from(transactionsTable)
+    .where(typeCondition ? and(userCondition, typeCondition) : userCondition)
     .orderBy(desc(transactionsTable.createdAt))
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
   const data = hasMore ? rows.slice(0, limit) : rows;
-  return res.json({
-    data,
-    nextCursor: hasMore ? data[data.length - 1].createdAt.toISOString() : null,
-    total: data.length,
-  });
+  return res.json({ data, nextCursor: hasMore ? data[data.length - 1].createdAt.toISOString() : null, total: data.length });
 });
 
 router.get("/transactions/stats", async (req, res) => {
   const userId = getUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const all = await db
-    .select()
-    .from(transactionsTable)
-    .where(eq(transactionsTable.userId, userId));
+  const all = await db.select().from(transactionsTable).where(eq(transactionsTable.userId, userId));
 
   const debits = all.filter((t) => t.direction === "debit");
   const credits = all.filter((t) => t.direction === "credit");
@@ -74,10 +63,6 @@ router.get("/transactions/stats", async (req, res) => {
     if (t.direction === "debit") byMonth[m].sent += t.amount;
     else byMonth[m].received += t.amount;
   }
-  const monthlyVolume = Object.entries(byMonth).map(([month, v]) => ({
-    month,
-    ...v,
-  }));
 
   return res.json({
     totalSent,
@@ -87,7 +72,7 @@ router.get("/transactions/stats", async (req, res) => {
     transferCount,
     paymentCount,
     withdrawalCount,
-    monthlyVolume,
+    monthlyVolume: Object.entries(byMonth).map(([month, v]) => ({ month, ...v })),
   });
 });
 

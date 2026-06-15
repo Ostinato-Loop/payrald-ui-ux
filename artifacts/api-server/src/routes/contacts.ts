@@ -4,6 +4,7 @@ import { contactsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
+
 function getUserId(req: any): string | null {
   return req.headers.authorization?.replace("Bearer ", "") ?? null;
 }

@@ -8,6 +8,7 @@ import paymentsRouter from "./payments";
 import withdrawalsRouter from "./withdrawals";
 import transactionsRouter from "./transactions";
 import contactsRouter from "./contacts";
+import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(paymentsRouter);
 router.use(withdrawalsRouter);
 router.use(transactionsRouter);
 router.use(contactsRouter);
+router.use(webhooksRouter);
 
 export default router;

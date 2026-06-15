@@ -22,7 +22,8 @@ export const paymentsTable = pgTable("payments", {
   fee: real("fee").notNull().default(0),
   currency: text("currency").notNull().default("NGN"),
   note: text("note"),
-  status: text("status").notNull().default("completed"),
+  status: text("status").notNull().default("pending"),
+  providerRef: text("provider_ref"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

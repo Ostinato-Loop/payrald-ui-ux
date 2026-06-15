@@ -10,6 +10,9 @@ export const walletsTable = pgTable("wallets", {
   available: real("available").notNull().default(0),
   pending: real("pending").notNull().default(0),
   currency: text("currency").notNull().default("NGN"),
+  virtualAccountNumber: text("virtual_account_number"),
+  virtualAccountBank: text("virtual_account_bank"),
+  virtualAccountRef: text("virtual_account_ref"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
