@@ -1,3 +1,18 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Brand navy background with rounded corners -->
+  <rect width="64" height="64" rx="14" fill="#1B2F4E"/>
+
+  <!-- Left pillar — brand red -->
+  <rect x="9" y="24" width="13" height="30" rx="6.5" fill="#D4302A"/>
+
+  <!-- Centre pillar — light navy (tallest) -->
+  <rect x="25.5" y="14" width="13" height="40" rx="6.5" fill="#4A6FA0"/>
+
+  <!-- Right pillar — brand amber -->
+  <rect x="42" y="28" width="13" height="26" rx="6.5" fill="#F0A020"/>
+
+  <!-- Arc connecting all three at the top -->
+  <path d="M15.5 26 Q32 10 48.5 30"
+        stroke="#A8BFDD" stroke-width="3"
+        fill="none" stroke-linecap="round"/>
 </svg>
