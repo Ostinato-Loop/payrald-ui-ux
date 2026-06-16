@@ -74,10 +74,11 @@ export default function Dashboard() {
         </div>
 
         {/* Quick actions */}
-        <div className="grid grid-cols-3 gap-3 mt-4">
+        <div className="grid grid-cols-4 gap-2 mt-4">
           {[
             { label: "Send", icon: "→", href: "/send", color: "var(--blue)" },
             { label: "Withdraw", icon: "↑", href: "/withdraw", color: "#00C896" },
+            { label: "Shop", icon: "🎁", href: "/vouchers", color: "#A855F7" },
             { label: "History", icon: "≡", href: "/history", color: "#F5A623" },
           ].map(({ label, icon, href, color }) => (
             <Link href={href} key={label}>
