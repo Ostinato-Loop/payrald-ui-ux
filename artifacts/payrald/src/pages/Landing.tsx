@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { useState, useEffect } from "react";
+import Logo from "../components/Logo";
 
 const aliases = ["@amaka", "08012345678", "john@gmail.com", "@busman", "+2349031234567", "@fatima"];
 
@@ -14,12 +15,9 @@ export default function Landing() {
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
       {/* Nav */}
-      <nav className="fixed top-0 inset-x-0 z-50 border-b" style={{ borderColor: "var(--border)", background: "rgba(4,12,24,0.9)", backdropFilter: "blur(16px)" }}>
+      <nav className="fixed top-0 inset-x-0 z-50 border-b" style={{ borderColor: "var(--border)", background: "rgba(2,11,23,0.92)", backdropFilter: "blur(20px)" }}>
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-black text-xl text-white tracking-tight">Pay</span>
-            <span className="font-black text-xl tracking-tight" style={{ color: "var(--blue)" }}>Rald</span>
-          </div>
+          <Logo size="sm" />
           <div className="flex items-center gap-3">
             <Link href="/signin">
               <span className="text-sm cursor-pointer" style={{ color: "var(--text-secondary)" }}>Sign in</span>
@@ -35,9 +33,9 @@ export default function Landing() {
 
       {/* Hero */}
       <section className="pt-32 pb-24 px-4 text-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(0,102,255,0.15) 0%, transparent 70%)" }} />
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(60% 50% at 50% 0%, rgba(26,111,255,0.18) 0%, transparent 70%)" }} />
         <div className="relative z-10 max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 rounded-full border text-xs font-medium" style={{ borderColor: "rgba(0,102,255,0.3)", background: "rgba(0,102,255,0.08)", color: "var(--blue)" }}>
+          <div className="inline-flex items-center gap-2 mb-8 px-3 py-1.5 rounded-full border text-xs font-medium" style={{ borderColor: "rgba(26,111,255,0.3)", background: "rgba(26,111,255,0.08)", color: "var(--blue)" }}>
             <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "var(--blue)" }} />
             Enterprise-grade African payment rails
           </div>

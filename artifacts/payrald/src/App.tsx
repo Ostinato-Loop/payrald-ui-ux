@@ -7,13 +7,14 @@ import Dashboard from "./pages/Dashboard";
 import Send from "./pages/Send";
 import History from "./pages/History";
 import Withdraw from "./pages/Withdraw";
+import Vouchers from "./pages/Vouchers";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="w-8 h-8 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
       </div>
     );
   }
@@ -26,7 +27,7 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
-        <div className="w-8 h-8 border-2 border-[#0066FF] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
       </div>
     );
   }
@@ -70,6 +71,11 @@ export default function App() {
       <Route path="/withdraw">
         <ProtectedRoute>
           <Withdraw />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/vouchers">
+        <ProtectedRoute>
+          <Vouchers />
         </ProtectedRoute>
       </Route>
       <Route>

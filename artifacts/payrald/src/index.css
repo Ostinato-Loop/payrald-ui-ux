@@ -1,15 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #040C18;
-  --surface: #0D1B2E;
-  --surface-2: #132238;
-  --border: rgba(255, 255, 255, 0.08);
-  --blue: #0066FF;
-  --blue-hover: #0052CC;
-  --blue-dim: rgba(0, 102, 255, 0.12);
+  /* Neon Navy Blue palette */
+  --bg: #020B17;
+  --surface: #071523;
+  --surface-2: #0C1E30;
+  --surface-3: #102540;
+  --border: rgba(26, 111, 255, 0.12);
+  --border-bright: rgba(26, 111, 255, 0.28);
+
+  /* Neon electric blue */
+  --blue: #1A6FFF;
+  --blue-hover: #1259E6;
+  --blue-dim: rgba(26, 111, 255, 0.12);
+  --blue-glow: rgba(26, 111, 255, 0.2);
+  --navy: #0A1628;
+
   --text: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-secondary: rgba(255, 255, 255, 0.62);
   --text-muted: rgba(255, 255, 255, 0.35);
   --success: #00C896;
   --success-dim: rgba(0, 200, 150, 0.12);

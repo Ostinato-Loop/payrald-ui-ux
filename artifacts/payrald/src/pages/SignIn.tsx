@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
+import Logo from "../components/Logo";
 
 export default function SignIn() {
   const { signIn } = useAuth();
@@ -34,12 +35,11 @@ export default function SignIn() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/">
-            <span className="inline-flex items-center gap-1 cursor-pointer">
-              <span className="font-black text-2xl text-white">Pay</span>
-              <span className="font-black text-2xl" style={{ color: "var(--blue)" }}>Rald</span>
+            <span className="inline-flex cursor-pointer justify-center">
+              <Logo size="lg" />
             </span>
           </Link>
-          <p className="mt-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          <p className="mt-3 text-sm" style={{ color: "var(--text-secondary)" }}>
             Welcome back
           </p>
         </div>

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/api";
 import { formatNGN, formatCompact, formatRelative } from "../lib/format";
+import Logo from "../components/Logo";
 
 type Wallet = { id: string; type: string; total: number; available: number; pending: number; currency: string };
 type WalletResponse = { balances: Wallet[]; totalNgn: number };
@@ -12,12 +13,9 @@ type TxPage = { data: Transaction[]; total: number };
 
 function NavBar({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <nav className="fixed top-0 inset-x-0 z-40 border-b" style={{ borderColor: "var(--border)", background: "rgba(4,12,24,0.95)", backdropFilter: "blur(16px)" }}>
+    <nav className="fixed top-0 inset-x-0 z-40 border-b" style={{ borderColor: "var(--border)", background: "rgba(2,11,23,0.96)", backdropFilter: "blur(20px)" }}>
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <span className="font-black text-lg text-white">Pay</span>
-          <span className="font-black text-lg" style={{ color: "var(--blue)" }}>Rald</span>
-        </div>
+        <Logo size="sm" />
         <div className="flex items-center gap-4">
           <Link href="/history">
             <span className="text-sm cursor-pointer" style={{ color: "var(--text-secondary)" }}>History</span>
@@ -61,7 +59,7 @@ export default function Dashboard() {
         <div
           className="mt-6 p-6 rounded-2xl relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #0052CC 0%, #0066FF 60%, #0080FF 100%)",
+            background: "linear-gradient(135deg, #0A1E4A 0%, #1045B4 40%, #1A6FFF 100%)",
           }}
         >
           <div className="absolute inset-0 opacity-10" style={{ background: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='white' fill-opacity='1'%3E%3Ccircle cx='20' cy='20' r='1'/%3E%3C/g%3E%3C/svg%3E\")" }} />
@@ -76,10 +74,11 @@ export default function Dashboard() {
         </div>
 
         {/* Quick actions */}
-        <div className="grid grid-cols-3 gap-3 mt-4">
+        <div className="grid grid-cols-4 gap-2 mt-4">
           {[
             { label: "Send", icon: "→", href: "/send", color: "var(--blue)" },
             { label: "Withdraw", icon: "↑", href: "/withdraw", color: "#00C896" },
+            { label: "Shop", icon: "🎁", href: "/vouchers", color: "#A855F7" },
             { label: "History", icon: "≡", href: "/history", color: "#F5A623" },
           ].map(({ label, icon, href, color }) => (
             <Link href={href} key={label}>
