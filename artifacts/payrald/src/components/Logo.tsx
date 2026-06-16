@@ -1,29 +1,29 @@
 interface LogoProps {
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   showText?: boolean;
   className?: string;
 }
 
-const sizes = {
-  sm: { img: "h-7 w-7", text: "text-lg" },
-  md: { img: "h-9 w-9", text: "text-xl" },
-  lg: { img: "h-12 w-12", text: "text-2xl" },
+const cfg = {
+  xs: { h: "h-6",  text: "text-base" },
+  sm: { h: "h-7",  text: "text-lg"   },
+  md: { h: "h-9",  text: "text-xl"   },
+  lg: { h: "h-11", text: "text-2xl"  },
 };
 
 export default function Logo({ size = "md", showText = true, className = "" }: LogoProps) {
-  const s = sizes[size];
+  const c = cfg[size];
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
       <img
-        src="/payrald-logo.png"
+        src="/payrald-logo-dark.png"
         alt="PayRald"
-        className={`${s.img} object-contain`}
-        style={{ filter: "drop-shadow(0 0 6px rgba(26,111,255,0.25))" }}
+        className={`${c.h} w-auto object-contain`}
+        draggable={false}
       />
       {showText && (
-        <span className={`font-black ${s.text} tracking-tight`}>
-          <span className="text-white">Pay</span>
-          <span style={{ color: "var(--blue)" }}>Rald</span>
+        <span className={`font-black ${c.text} tracking-tight leading-none text-white`}>
+          PayRald
         </span>
       )}
     </span>

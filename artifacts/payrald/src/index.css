@@ -1,38 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  /* Neon Navy Blue palette */
-  --bg: #020B17;
-  --surface: #071523;
-  --surface-2: #0C1E30;
-  --surface-3: #102540;
-  --border: rgba(26, 111, 255, 0.12);
-  --border-bright: rgba(26, 111, 255, 0.28);
+  /* ── PayRald brand colours ─────────────────────────────── */
+  --navy:           #1B2F4E;
+  --navy-mid:       #243D62;
+  --navy-bright:    #2E4F80;
+  --red:            #D4302A;
+  --red-dim:        rgba(212, 48, 42, 0.14);
+  --amber:          #F0A020;
+  --amber-dim:      rgba(240, 160, 32, 0.14);
 
-  /* Neon electric blue */
-  --blue: #1A6FFF;
-  --blue-hover: #1259E6;
-  --blue-dim: rgba(26, 111, 255, 0.12);
-  --blue-glow: rgba(26, 111, 255, 0.2);
-  --navy: #0A1628;
+  /* ── Backgrounds ───────────────────────────────────────── */
+  --bg:             #06101E;
+  --surface:        #0C1828;
+  --surface-2:      #122030;
+  --surface-3:      #182840;
 
-  --text: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.62);
-  --text-muted: rgba(255, 255, 255, 0.35);
-  --success: #00C896;
-  --success-dim: rgba(0, 200, 150, 0.12);
-  --error: #FF4B4B;
-  --error-dim: rgba(255, 75, 75, 0.12);
-  --warning: #F5A623;
+  /* ── Borders ───────────────────────────────────────────── */
+  --border:         rgba(27, 47, 78, 0.5);
+  --border-bright:  rgba(46, 79, 128, 0.65);
+
+  /* ── Semantic aliases (used by existing components) ────── */
+  --blue:           #2E4F80;
+  --blue-hover:     #243D62;
+  --blue-dim:       rgba(27, 47, 78, 0.18);
+
+  /* ── Text ──────────────────────────────────────────────── */
+  --text:           #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-muted:     rgba(255, 255, 255, 0.35);
+
+  /* ── Status ────────────────────────────────────────────── */
+  --success:        #00C896;
+  --success-dim:    rgba(0, 200, 150, 0.12);
+  --error:          #FF4B4B;
+  --error-dim:      rgba(255, 75, 75, 0.12);
+  --warning:        #F0A020;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
@@ -44,25 +51,13 @@ body {
   min-height: 100vh;
 }
 
-#root {
-  min-height: 100vh;
-}
+#root { min-height: 100vh; }
 
-::selection {
-  background: var(--blue);
-  color: white;
-}
+::selection { background: var(--navy-bright); color: #fff; }
 
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
 
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

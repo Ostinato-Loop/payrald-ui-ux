@@ -13,7 +13,12 @@ type TxPage = { data: Transaction[]; total: number };
 
 function NavBar({ onSignOut }: { onSignOut: () => void }) {
   return (
-    <nav className="fixed top-0 inset-x-0 z-40 border-b" style={{ borderColor: "var(--border)", background: "rgba(2,11,23,0.96)", backdropFilter: "blur(20px)" }}>
+    <nav className="fixed top-0 inset-x-0 z-40"
+      style={{
+        borderBottom: "1px solid rgba(27,47,78,0.4)",
+        background: "rgba(6,16,30,0.92)",
+        backdropFilter: "blur(24px)",
+      }}>
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
         <Logo size="sm" />
         <div className="flex items-center gap-4">
