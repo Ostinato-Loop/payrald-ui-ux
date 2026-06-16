@@ -7,77 +7,79 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  fix-domain:
+  fix:
     name: Diagnose and fix payrald.rald.cloud
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Install Wrangler
-        run: npm install -g wrangler@latest
-
-      - name: List all CF Pages projects and their custom domains
+      - name: Auto-detect CF account ID
+        id: cf
+        run: |
+          ACCOUNT_ID=$(curl -s \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts" \
+            | jq -r '.result[0].id')
+          ZONE_ID=$(curl -s \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones?name=rald.cloud" \
+            | jq -r '.result[0].id')
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "zone_id=$ZONE_ID" >> $GITHUB_OUTPUT
+          echo "Account: ${ACCOUNT_ID:0:6}... Zone: ${ZONE_ID:0:6}..."
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Diagnose - list Pages projects and domains
         run: |
           echo "=== All Pages projects ==="
           curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=50" \
-            | jq -r '.result[].name'
-
-          echo ""
-          echo "=== payrald-ui domains ==="
-          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/payrald-ui" \
-            | jq -r '(.result.domains // [])[]'
-
-          echo ""
-          echo "=== All projects with custom domains ==="
-          for proj in $(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects?per_page=50" \
-            | jq -r '.result[].name'); do
-            domains=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$proj" \
-              | jq -r '.result.domains[]?' 2>/dev/null)
-            if [ -n "$domains" ]; then
-              echo "  $proj: $domains"
-            fi
-          done
-
-      - name: List Workers routes and DNS for rald.cloud
+            "https://api.cloudflare.com/client/v4/accounts/${{ steps.cf.outputs.account_id }}/pages/projects?per_page=50" \
+            | jq -r '.result[] | "\(.name) — domains: \((.domains // []) | join(", "))"'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          ZONE_ID=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones?name=rald.cloud" \
-            | jq -r '.result[0].id')
-          echo "Zone ID: $ZONE_ID"
-          echo "ZONE_ID=$ZONE_ID" >> $GITHUB_ENV
 
-          echo ""
+      - name: Diagnose - Workers routes and Page Rules for rald.cloud
+        run: |
+          Z="${{ steps.cf.outputs.zone_id }}"
           echo "=== Workers routes ==="
           curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/workers/routes" \
-            | jq -r '.result[] | "\(.pattern) -> \(.script // "(no script)")"'
-
+            "https://api.cloudflare.com/client/v4/zones/$Z/workers/routes" \
+            | jq -r '.result[] | "\(.id) \(.pattern) -> \(.script // "(no script)")"'
+          echo ""
+          echo "=== Page Rules ==="
+          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones/$Z/pagerules" \
+            | jq -r '.result[] | "\(.id) \(.status) \(.targets[0].constraint.value) -> \(.actions[0].id)"'
+          echo ""
+          echo "=== Redirect Rules ==="
+          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones/$Z/rulesets" \
+            | jq -r '.result[] | select(.phase=="http_request_dynamic_redirect") | "\(.id) \(.name)"'
           echo ""
           echo "=== DNS records for payrald.rald.cloud ==="
           curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/dns_records?name=payrald.rald.cloud" \
-            | jq -r '.result[] | "\(.type) \(.name) -> \(.content) [proxied=\(.proxied)]"'
-
-      - name: Force payrald.rald.cloud onto payrald-ui Pages project
+            "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?name=payrald.rald.cloud" \
+            | jq -r '.result[] | "\(.type) \(.name) -> \(.content) [proxied: \(.proxied)]"'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          echo "=== Adding payrald.rald.cloud to payrald-ui ==="
-          wrangler pages domain add payrald.rald.cloud \
-            --project-name=payrald-ui 2>&1 || true
 
-          echo ""
-          echo "=== Verifying payrald-ui domains after fix ==="
+      - name: Add payrald.rald.cloud to payrald-ui Pages project
+        run: |
+          RESP=$(curl -s -X POST \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts/${{ steps.cf.outputs.account_id }}/pages/projects/payrald-ui/domains" \
+            -d '{"name":"payrald.rald.cloud"}')
+          echo "$RESP" | jq '.'
+          echo "$RESP" | jq -e '.success' || echo "WARNING: domain add may have failed or already exists"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        continue-on-error: true
+
+      - name: List payrald-ui domains after fix
+        run: |
           curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/payrald-ui" \
-            | jq -r '.result.domains[]?'
+            "https://api.cloudflare.com/client/v4/accounts/${{ steps.cf.outputs.account_id }}/pages/projects/payrald-ui/domains" \
+            | jq '.'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
