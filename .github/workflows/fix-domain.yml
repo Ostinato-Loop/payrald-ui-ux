@@ -2,84 +2,67 @@ name: Fix payrald.rald.cloud domain
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-domain.yml'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   fix:
-    name: Diagnose and fix payrald.rald.cloud
+    name: Attach payrald.rald.cloud to CF Pages
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Auto-detect CF account ID
-        id: cf
+      - name: Attach custom domain via CF API (idempotent)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          ACCOUNT_ID=$(curl -s \
+          CF_PROJECT="payrald-ui"
+          CF_DOMAIN="payrald.rald.cloud"
+
+          echo "Checking existing domains on $CF_PROJECT..."
+          EXISTING=$(curl -s \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts" \
-            | jq -r '.result[0].id')
-          ZONE_ID=$(curl -s \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones?name=rald.cloud" \
-            | jq -r '.result[0].id')
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "zone_id=$ZONE_ID" >> $GITHUB_OUTPUT
-          echo "Account: ${ACCOUNT_ID:0:6}... Zone: ${ZONE_ID:0:6}..."
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CF_PROJECT/domains" \
+            | jq -r ".result[]? | select(.name == \"$CF_DOMAIN\") | .name")
 
-      - name: Diagnose - list Pages projects and domains
-        run: |
-          echo "=== All Pages projects ==="
-          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/${{ steps.cf.outputs.account_id }}/pages/projects?per_page=50" \
-            | jq -r '.result[] | "\(.name) — domains: \((.domains // []) | join(", "))"'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          if [ "$EXISTING" = "$CF_DOMAIN" ]; then
+            echo "✅ $CF_DOMAIN already attached — checking status..."
+            STATUS=$(curl -s \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CF_PROJECT/domains" \
+              | jq -r ".result[]? | select(.name == \"$CF_DOMAIN\") | .status")
+            echo "Domain status: $STATUS"
+            exit 0
+          fi
 
-      - name: Diagnose - Workers routes and Page Rules for rald.cloud
-        run: |
-          Z="${{ steps.cf.outputs.zone_id }}"
-          echo "=== Workers routes ==="
-          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$Z/workers/routes" \
-            | jq -r '.result[] | "\(.id) \(.pattern) -> \(.script // "(no script)")"'
-          echo ""
-          echo "=== Page Rules ==="
-          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$Z/pagerules" \
-            | jq -r '.result[] | "\(.id) \(.status) \(.targets[0].constraint.value) -> \(.actions[0].id)"'
-          echo ""
-          echo "=== Redirect Rules ==="
-          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$Z/rulesets" \
-            | jq -r '.result[] | select(.phase=="http_request_dynamic_redirect") | "\(.id) \(.name)"'
-          echo ""
-          echo "=== DNS records for payrald.rald.cloud ==="
-          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?name=payrald.rald.cloud" \
-            | jq -r '.result[] | "\(.type) \(.name) -> \(.content) [proxied: \(.proxied)]"'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      - name: Add payrald.rald.cloud to payrald-ui Pages project
-        run: |
-          RESP=$(curl -s -X POST \
+          echo "Attaching $CF_DOMAIN to $CF_PROJECT..."
+          RESP=$(curl -sf -X POST \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             -H "Content-Type: application/json" \
-            "https://api.cloudflare.com/client/v4/accounts/${{ steps.cf.outputs.account_id }}/pages/projects/payrald-ui/domains" \
-            -d '{"name":"payrald.rald.cloud"}')
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$CF_PROJECT/domains" \
+            -d "{\"name\":\"$CF_DOMAIN\"}")
           echo "$RESP" | jq '.'
-          echo "$RESP" | jq -e '.success' || echo "WARNING: domain add may have failed or already exists"
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        continue-on-error: true
+          echo "$RESP" | jq -e '.success' && echo "✅ Domain attached successfully" || echo "⚠ Check response above"
 
-      - name: List payrald-ui domains after fix
-        run: |
-          curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            "https://api.cloudflare.com/client/v4/accounts/${{ steps.cf.outputs.account_id }}/pages/projects/payrald-ui/domains" \
-            | jq '.'
+      - name: Verify Pages project and list all domains
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "=== payrald-ui project domains ==="
+          curl -s \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/payrald-ui/domains" \
+            | jq '[.result[]? | {name, status, created_on}]'
+
+      - name: Smoke test
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://payrald.rald.cloud" || echo "000")
+          echo "payrald.rald.cloud → HTTP $STATUS"
+        continue-on-error: true
